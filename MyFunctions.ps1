@@ -25,7 +25,17 @@ class Participant {
 
 function GetUserData {
     $MyUserListFile = "$PSScriptRoot\MyLabFile.csv"
-    $MyUserList = Get-Content -Path $MyUserListFile | ConvertFrom-Csv
+
+    try {
+        $MyUserList = Get-Content -Path $MyUserListFile -ErrorAction Stop | ConvertFrom-Csv
+    }
+    catch [System.Management.Automation.ItemNotFoundException] {
+        Throw "Database not found: $MyUserListFile"
+    }
+    catch {
+        Throw "Unknown error: $_"
+    }
+
     $MyUserList
 }
 
@@ -58,6 +68,7 @@ function Add-CourseUser {
         $DatabaseFile = "$PSScriptRoot\MyLabFile.csv",
 
         [Parameter(Mandatory)]
+        [ValidatePattern({'^[A-Z][\w\-\s]*$'}, ErrorMessage = 'Name is in an incorrect format')]
         [string]$Name,
 
         [Parameter(Mandatory)]
@@ -100,5 +111,17 @@ function Remove-CourseUser {
     }
     else {
         Write-Output "Did not remove user $($RemoveUser.Name)"
+    }
+}
+
+function Confirm-CourseID {
+    Param()
+
+    $AllUsers = GetUserData
+
+    foreach ($User in $AllUsers) {
+        if ($User.Id -notmatch '^\d+$') {
+            Write-Error "User $($User.Name) has mismatching id: $($User.Id)"
+        }
     }
 }
